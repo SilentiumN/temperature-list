@@ -1,0 +1,12 @@
+@mixin hover-raise-animation-button($color) {
+  box-shadow: 0 0.5em 0.5em -0.4em $color;
+  transform: translateY(-0.25em);
+}
+
+@mixin hover-fill-animation-button($color) {
+  background-color: $color;
+}
+
+@mixin box-shadow-primary {
+  box-shadow: rgba(149, 157, 165, 0.2) 0 8px 24px;
+}
