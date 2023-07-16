@@ -56,6 +56,7 @@ input[type=number] {
 
   &_transparent {
     background: transparent;
+    color: currentColor;
 
     &:hover {
       @include hover-fill-animation-button($gray-light);
