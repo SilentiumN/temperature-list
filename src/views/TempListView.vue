@@ -1,74 +1,92 @@
 <script lang="ts" setup>
-import piniaStore from '@/store';
 import { computed, ref, Ref } from 'vue';
-import type { TemperatureList } from '@/types/temperature';
-import TempListItem from '@/components/TempListItem.vue';
 import { useRouter } from 'vue-router';
+import TempListItem from '@/components/TempListItem.vue';
 import ModalConfirmWindow from '@/components/ModalConfirmWindow.vue';
+import piniaStore from '@/store';
+import type { TemperatureList } from '@/types/temperature';
 
+// definition vue-router and store
 const router = useRouter();
 const store = piniaStore();
 
+// definition reference for modal confirmation window
 const modalConfirmWindow: Ref<InstanceType<typeof ModalConfirmWindow>|null> = ref(null);
-const modalConfirmWindowOptions: Ref<{
-  onSubmitText?: string;
-  onCancelText?: string;
-  message?: string;
-  title?: string;
-}> = ref({});
 
+// definition list of temperature values from store
 const tempList = computed(():TemperatureList => store.descSortMap);
 
-const deleteTemp = (id: string) => {
+// function to delete value in list of temperatures values
+const deleteTemp = (id: string): void => {
   store.deleteTemperatureById(id);
 };
 
-const onEdit = (id: string) => {
+// function to go to edit page
+const onEdit = (id: string): void => {
   router.push(`/edit/${id}`);
 };
 
-const onDelete = async (id: string) => {
-  modalConfirmWindowOptions.value = {
-    title: `Вы уверены, что хотите удалить показатель ${id}?`,
-    message: 'Удаленный показатель нельзя будет вернуть!',
-    onSubmitText: 'Удалить',
-    onCancelText: 'Отмена',
-  };
-
-  if (modalConfirmWindow.value && await modalConfirmWindow.value.open()) {
-    deleteTemp(id);
+// function to open confirmation window for deleting value from list of temperatures values
+const onDelete = (id: string): void => {
+  if (modalConfirmWindow.value) {
+    modalConfirmWindow.value.open({
+      title: `Вы уверены, что хотите удалить показатель ${id}?`,
+      message: 'Удаленный показатель нельзя будет вернуть!',
+      onSubmitText: 'Удалить',
+      onCancelText: 'Отмена',
+      onSubmit: () => deleteTemp(id),
+    });
   }
 };
 </script>
 
 <template>
+  <!-- TEMPERATURE LIST PAGE -->
   <div
     class="temp-list-view"
   >
+    <!-- TEMPERATURE LIST FILLED -->
     <div
       class="temp-list-view__list"
       v-if="tempList.size"
     >
-     <TempListItem
-       v-for="[tempItemKey, tempItemVal] in tempList"
-       :key="tempItemKey"
-       :temp-item-id="tempItemKey"
-       :temp-item-value="tempItemVal"
-       @onDelete="onDelete(tempItemKey)"
-       @onEdit="onEdit(tempItemKey)"
-     />
+      <TempListItem
+        v-for="[tempItemKey, tempItemVal] in tempList"
+        :key="tempItemKey"
+        :temp-item-id="tempItemKey"
+        :temp-item-value="tempItemVal"
+        @onDelete="onDelete(tempItemKey)"
+        @onEdit="onEdit(tempItemKey)"
+      />
     </div>
+    <!-- TEMPERATURE LIST EMPTY -->
     <div
       v-else
       class="temp-list-view__empty"
     >
       Вы еще не добавили ни одного значения
     </div>
+    <!-- MODAL CONFIRMATION WINDOW IN TEMPERATURE LIST PAGE -->
     <ModalConfirmWindow
       ref="modalConfirmWindow"
-      v-bind="modalConfirmWindowOptions"
     />
   </div>
 </template>
 
-<style lang="scss" scoped src="../assets/styles/views/temp-list-view.scss"/>
+<style lang="scss" scoped>
+  .temp-list-view {
+    &__list {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    &__empty {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-weight: 300;
+      font-size: 16px;
+    }
+  }
+</style>

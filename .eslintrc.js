@@ -3,6 +3,16 @@ module.exports = {
   env: {
     node: true,
   },
+  settings: {
+    'import/resolver': {
+      node: {
+        extensions: ['.js', '.jsx', '.ts', '.tsx', '.vue'],
+      },
+      alias: [
+        ['@', './src'],
+      ],
+    },
+  },
   extends: [
     'plugin:vue/vue3-essential',
     '@vue/airbnb',
@@ -14,5 +24,7 @@ module.exports = {
   rules: {
     'no-console': process.env.NODE_ENV === 'production' ? 'warn' : 'off',
     'no-debugger': process.env.NODE_ENV === 'production' ? 'warn' : 'off',
+    'import/extensions': 'off',
+    'import/no-unresolved': 'off',
   },
 };

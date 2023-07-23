@@ -1,91 +1,109 @@
 <script lang="ts" setup>
 import {
-  computed, defineProps, onBeforeMount, ref, Ref,
+  computed, onBeforeMount, ref, Ref,
 } from 'vue';
-import type { TemperatureId, TemperatureValue } from '@/types/temperature';
+import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router';
 import IconSet from '@/components/IconSet.vue';
-import piniaStore from '@/store';
-import { useRoute, useRouter, onBeforeRouteLeave } from 'vue-router';
 import ModalConfirmWindow from '@/components/ModalConfirmWindow.vue';
+import type { TemperatureValue } from '@/types/temperature';
+import piniaStore from '@/store';
 
+// definition vue-router and store
 const store = piniaStore();
 const route = useRoute();
 const router = useRouter();
 
-const tempValue: Ref<number|null> = ref(null);
+// definition temperature value and id
+const tempValue: Ref<number | null> = ref(null);
 const tempId: Ref<string> = ref('');
-const modalConfirmWindow: Ref<InstanceType<typeof ModalConfirmWindow>|null> = ref(null);
-const modalConfirmWindowOptions: Ref<{
-  onSubmitText?: string;
-  onCancelText?: string;
-  message?: string;
-  title?: string;
-}> = ref({});
+// determining if checking is needed before route leave
+const isNeedCheckBeforeRouteLeave: Ref<boolean> = ref(true);
+// definition reference for modal confirmation window
+const modalConfirmWindow: Ref<InstanceType<typeof ModalConfirmWindow> | null> = ref(null);
 
+// function to get value from list of temperature values by id
 const getTemperatureValueById = (
   id: string,
-):TemperatureValue|null => store.getTemperatureValueById(id);
+): TemperatureValue | null => store.getTemperatureValueById(id);
 
+// preparation of component before mount
 onBeforeMount(() => {
+  // getting temperature id from route params
   tempId.value = route.params.tempId.toString() || '';
 
+  // getting the temperature value if id exists in route params
   if (tempId.value) {
     const currentTemp = getTemperatureValueById(tempId.value);
     tempValue.value = currentTemp?.value || null;
   }
 });
 
-const onSubmitBtnText = computed(() => {
+// defining the text for the submit button
+const onSubmitBtnText = computed(():string => {
+  // if it is existing value
   if (tempId.value) {
     return 'Сохранить';
   }
+
+  // if it is new value
   return 'Добавить';
 });
 
-const currentTemp = computed(() => {
+// definition current temperature value from list of temperature values
+const currentTemp = computed((): TemperatureValue | null => {
   if (tempId.value) {
     return getTemperatureValueById(tempId.value);
   }
   return null;
 });
 
+// defining disable state for the submit button
 const isDisableSubmitBtn = computed(
   () => !tempValue.value,
 );
 
+// defining disable state for the delete button
 const isDisableDeleteBtn = computed(
   () => !tempId.value || !currentTemp.value,
 );
 
-const goToMainPage = ():void => {
+// function to go to main page
+const goToMainPage = (): void => {
   router.push('/');
 };
 
+// function to set new value in list of temperature values
 const addNewTemp = (value: number) => {
   store.addNewTemperature(value);
 };
 
+// function to edit value in list of temperatures values
 const editTemp = (id: string, value: number) => {
   store.editTemperatureById(id, value);
 };
 
+// function to delete value in list of temperatures values
 const deleteTemp = (id: string) => {
   store.deleteTemperatureById(id);
 };
 
+// function to open confirmation window for deleting value from list of temperatures values
 const onDeleteBtn = async () => {
-  modalConfirmWindowOptions.value = {
-    title: `Вы уверены, что хотите удалить показатель ${tempId.value}?`,
-    message: 'Удаленный показатель нельзя будет вернуть!',
-    onSubmitText: 'Удалить',
-    onCancelText: 'Отмена',
-  };
-
-  if (tempId.value && currentTemp.value && await modalConfirmWindow.value.open()) {
-    deleteTemp(tempId.value);
-    goToMainPage();
+  if (tempId.value && currentTemp.value && modalConfirmWindow.value) {
+    modalConfirmWindow.value.open({
+      title: `Вы уверены, что хотите удалить показатель ${tempId.value}?`,
+      message: 'Удаленный показатель нельзя будет вернуть!',
+      onSubmitText: 'Удалить',
+      onCancelText: 'Отмена',
+      onSubmit: () => {
+        deleteTemp(tempId.value);
+        goToMainPage();
+      },
+    });
   }
 };
+
+// getting submit function
 const onSubmit = () => {
   if (
     tempId.value
@@ -101,81 +119,117 @@ const onSubmit = () => {
   goToMainPage();
 };
 
+// function for cancel event
 const onCancelBtn = () => {
   goToMainPage();
 };
 
+// checking unsaved changes
 const isExistUnsavedChanges = () => (
   tempId.value && currentTemp.value && currentTemp.value.value !== tempValue.value)
-    || (!tempId.value && tempValue.value);
+  || (!tempId.value && typeof tempValue.value === 'number');
 
-onBeforeRouteLeave(async (to, from, next) => {
-  modalConfirmWindowOptions.value = {
-    title: 'Вы уверены, что хотите покинуть страницу?',
-    message: 'Внесенные изменение не сохраняться',
-    onSubmitText: 'Подтвердить',
-    onCancelText: 'Отмена',
-  };
-
+onBeforeRouteLeave((to, from, next) => {
+  // checking unsaved changes
   const unsavedChanges = isExistUnsavedChanges();
 
-  if (unsavedChanges && !await modalConfirmWindow.value.open()) {
-    next(false);
+  // open confirmation window if needed confirm leaving
+  if (isNeedCheckBeforeRouteLeave.value && unsavedChanges && modalConfirmWindow.value) {
+    modalConfirmWindow.value.open({
+      title: 'Вы уверены, что хотите покинуть страницу?',
+      message: 'Внесенные изменение не сохраняться',
+      onSubmitText: 'Подтвердить',
+      onCancelText: 'Отмена',
+      onSubmit: () => {
+        isNeedCheckBeforeRouteLeave.value = false;
+        router.push(`${to.fullPath}`);
+      },
+    });
+    return;
   }
+
+  // if not needed confirm - change route
   next();
 });
 </script>
 
 <template>
-<div
-  class="temp-edit-view container"
->
+  <!-- TEMPERATURE EDIT PAGE -->
   <div
-    class="temp-edit-view__fields"
+    class="temp-edit-view container"
   >
+    <!-- TEMPERATURE EDIT FIELDS -->
     <div
-      class="temp-edit-view__input-wrapper"
+      class="temp-edit-view__fields"
     >
-      <label for="temp">
-        <input
-          name="temp"
-          class="input"
-          v-model="tempValue"
-          type="number"
-          placeholder="Введите значение..."
-        >
-      </label>
+      <!-- TEMPERATURE EDIT INPUT -->
+      <div
+        class="temp-edit-view__input-wrapper"
+      >
+        <label for="temp">
+          <input
+            v-model="tempValue"
+            class="input"
+            name="temp"
+            placeholder="Введите значение..."
+            type="number"
+          >
+        </label>
+      </div>
+      <!-- TEMPERATURE EDIT DELETE BUTTON -->
+      <button
+        :disabled="isDisableDeleteBtn"
+        class="btn btn_transparent"
+        type="button"
+        @click="onDeleteBtn"
+      >
+        <IconSet name="trash" size="24" />
+      </button>
     </div>
-    <button
-      class="btn btn_transparent"
-      @click="onDeleteBtn"
-      :disabled="isDisableDeleteBtn"
+    <!-- TEMPERATURE EDIT FIELDS -->
+    <div
+      class="temp-edit-view__fields"
     >
-      <IconSet size="24" name="trash"/>
-    </button>
+      <!-- TEMPERATURE EDIT ACTIONS -->
+      <button
+        :disabled="isDisableSubmitBtn"
+        class="btn btn_purple"
+        type="button"
+        @click="onSubmit"
+      >
+        {{ onSubmitBtnText }}
+      </button>
+      <button
+        class="btn btn_white"
+        type="button"
+        @click="onCancelBtn"
+      >
+        Отмена
+      </button>
+    </div>
+    <!-- MODAL CONFIRMATION WINDOW IN TEMPERATURE EDIT PAGE -->
+    <ModalConfirmWindow
+      ref="modalConfirmWindow"
+    />
   </div>
-  <div
-    class="temp-edit-view__fields"
-  >
-    <button
-      class="btn btn_purple"
-      @click="onSubmit"
-      :disabled="isDisableSubmitBtn"
-    >
-      {{ onSubmitBtnText }}
-    </button>
-    <button
-      class="btn btn_white"
-      @click="onCancelBtn"
-    >
-      Отмена
-    </button>
-  </div>
-  <ModalConfirmWindow
-    ref="modalConfirmWindow"
-    v-bind="modalConfirmWindowOptions"
-  />
-</div>
 </template>
 
-<style lang="scss" scoped src="../assets/styles/views/temp-edit-view.scss"/>
+<style lang="scss" scoped>
+  .temp-edit-view {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+
+    &__fields {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+    }
+
+    &__input-wrapper {
+      width: 100%;
+      max-width: 300px;
+    }
+  }
+</style>
