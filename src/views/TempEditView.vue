@@ -29,11 +29,11 @@ const getTemperatureValueById = (
 // preparation of component before mount
 onBeforeMount(() => {
   // getting temperature id from route params
-  tempId.value = route.params.tempId.toString() || '';
+  tempId.value = route.params.tempId.toString() || '' as string;
 
   // getting the temperature value if id exists in route params
   if (tempId.value) {
-    const currentTemp = getTemperatureValueById(tempId.value);
+    const currentTemp = getTemperatureValueById(tempId.value) as TemperatureValue | null;
     tempValue.value = currentTemp?.value || null;
   }
 });
@@ -59,12 +59,12 @@ const currentTemp = computed((): TemperatureValue | null => {
 
 // defining disable state for the submit button
 const isDisableSubmitBtn = computed(
-  () => !tempValue.value,
+  (): boolean => !tempValue.value,
 );
 
 // defining disable state for the delete button
 const isDisableDeleteBtn = computed(
-  () => !tempId.value || !currentTemp.value,
+  (): boolean => !tempId.value || !currentTemp.value,
 );
 
 // function to go to main page
@@ -73,22 +73,22 @@ const goToMainPage = (): void => {
 };
 
 // function to set new value in list of temperature values
-const addNewTemp = (value: number) => {
+const addNewTemp = (value: number): void => {
   store.addNewTemperature(value);
 };
 
 // function to edit value in list of temperatures values
-const editTemp = (id: string, value: number) => {
+const editTemp = (id: string, value: number): void => {
   store.editTemperatureById(id, value);
 };
 
 // function to delete value in list of temperatures values
-const deleteTemp = (id: string) => {
+const deleteTemp = (id: string): void => {
   store.deleteTemperatureById(id);
 };
 
 // function to open confirmation window for deleting value from list of temperatures values
-const onDeleteBtn = async () => {
+const onDeleteBtn = (): void => {
   if (tempId.value && currentTemp.value && modalConfirmWindow.value) {
     modalConfirmWindow.value.open({
       title: `Вы уверены, что хотите удалить показатель ${tempId.value}?`,
@@ -103,8 +103,9 @@ const onDeleteBtn = async () => {
   }
 };
 
-// getting submit function
-const onSubmit = () => {
+// getting the function of the submit event depending
+// on whether the variable is new or existing
+const onSubmit = (): void => {
   if (
     tempId.value
     && typeof tempValue.value === 'number'
@@ -120,18 +121,18 @@ const onSubmit = () => {
 };
 
 // function for cancel event
-const onCancelBtn = () => {
+const onCancelBtn = (): void => {
   goToMainPage();
 };
 
 // checking unsaved changes
-const isExistUnsavedChanges = () => (
+const isExistUnsavedChanges = (): boolean => (
   tempId.value && currentTemp.value && currentTemp.value.value !== tempValue.value)
   || (!tempId.value && typeof tempValue.value === 'number');
 
 onBeforeRouteLeave((to, from, next) => {
   // checking unsaved changes
-  const unsavedChanges = isExistUnsavedChanges();
+  const unsavedChanges = isExistUnsavedChanges() as boolean;
 
   // open confirmation window if needed confirm leaving
   if (isNeedCheckBeforeRouteLeave.value && unsavedChanges && modalConfirmWindow.value) {
